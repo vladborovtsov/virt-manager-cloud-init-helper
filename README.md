@@ -9,6 +9,16 @@ This project provides a Bash script for creating virtual machines (VMs) using QE
 - Supports bridged and open (macvtap) network modes.
 - Cloud-init integration for user and SSH setup.
 
+# Project Overview
+
+As of the current version, this script fully satisfies my requirements. There are no immediate plans for new features, as updates will be based on future needs as they arise.
+
+## Contributions
+
+Contributions are always welcome! If you have any improvements or ideas, feel free to contribute.
+
+
+
 ## Prerequisites
 
 - qemu-kvm
@@ -39,7 +49,3 @@ This project provides a Bash script for creating virtual machines (VMs) using QE
 
 - **Bridge Mode:** Uses a bridge interface for VM networking.
 - **Open Mode:** Uses a macvtap interface, directly connecting the VM to the physical network.
-
-## Contribution
-
-Feel free to contribute, report issues, or suggest improvements!
