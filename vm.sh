@@ -21,6 +21,31 @@ VM_CPUS=${VM_CPUS:-$DEFAULT_VM_CPUS}
 read -p "Enter disk image size (e.g., 10G) (Press enter for default ${DEFAULT_IMAGE_SIZE}): " IMAGE_SIZE
 IMAGE_SIZE=${IMAGE_SIZE:-$DEFAULT_IMAGE_SIZE}
 
+# Ask for user's password for cloud-init
+read -sp "Enter password for ${CLOUD_USER}: " CLOUD_USER_PASSWORD
+echo ""
+HASHED_PASSWORD=$(mkpasswd -m sha-512 "$CLOUD_USER_PASSWORD")
+
+# Ask for Network Mode, use default if blank
+read -p "Enter Network Mode (bridge/open) [${NETWORK_MODE}]: " INPUT_NETWORK_MODE
+NETWORK_MODE=${INPUT_NETWORK_MODE:-$NETWORK_MODE}
+
+if [ "$NETWORK_MODE" == "open" ]; then
+    read -p "Enter the physical interface for open network mode [${OPEN_INTERFACE}]: " INPUT_OPEN_INTERFACE
+    OPEN_INTERFACE=${INPUT_OPEN_INTERFACE:-$OPEN_INTERFACE}
+fi
+
+# Rest of the script...
+# Modify the virt-install command to use the chosen NETWORK_MODE and interfaces
+
+# For bridge mode
+if [ "$NETWORK_MODE" == "bridge" ]; then
+    NETWORK_ARGS="--network bridge=${BRIDGE_INTERFACE},model=virtio"
+# For open (macvtap) mode
+elif [ "$NETWORK_MODE" == "open" ]; then
+    NETWORK_ARGS="--network type=direct,source=${OPEN_INTERFACE},source_mode=bridge,model=virtio"
+fi
+
 # Directory for VM files
 VM_DIR="${BASE_DIR}/${VM_NAME}"
 mkdir -p $VM_DIR
@@ -54,6 +79,7 @@ users:
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     groups: sudo
     shell: /bin/bash
+    passwd: "$HASHED_PASSWORD"
 
 ssh_authorized_keys:
   - ${SSH_PUBLIC_KEY}
@@ -66,7 +92,7 @@ genisoimage -output $VM_DIR/cidata.iso -V cidata -r -J $VM_DIR/user-data $VM_DIR
 virt-install --name=${VM_NAME} --ram=${VM_RAM} --vcpus=${VM_CPUS} --import \
 --disk path=$VM_DIR/${VM_NAME}.img,format=qcow2 \
 --disk path=$VM_DIR/cidata.iso,device=cdrom \
---os-variant=ubuntu20.04 --network bridge=virbr0,model=virtio \
+--os-variant=ubuntu20.04 ${NETWORK_ARGS} \
 --graphics vnc,listen=0.0.0.0 --noautoconsole
 
 # Wait for the VM to boot up
@@ -74,4 +100,5 @@ sleep 20
 
 # Get the VM's IP address
 virsh net-dhcp-leases default
+
 
