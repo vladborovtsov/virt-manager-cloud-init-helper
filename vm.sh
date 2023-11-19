@@ -112,8 +112,13 @@ sleep 20
 
 # Get the VM's IP address
 if [ "$NETWORK_MODE" == "bridge" ]; then
-    virsh net-dhcp-leases default
+    if [[ $VM_NAME == *"vir"* ]]; then
+        virsh net-dhcp-leases default | grep $MAC_ADDRESS
+    else
+        MAC_ADDRESS=$(virsh domiflist $VM_NAME | grep -o -E "([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})")
+        arp-scan -I $BRIDGE_INTERFACE --localnet | grep $MAC_ADDRESS
+    fi
 elif [ "$NETWORK_MODE" == "open" ]; then
-    MAC_ADDRESS=$(virsh domiflist $VM_NAME | grep -o -E "([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})")
-    arp-scan --localnet | grep $MAC_ADDRESS
+    echo "Guest cannot reach host via macvtap in open mode. Please determine the guest IP address manually."
 fi
+
