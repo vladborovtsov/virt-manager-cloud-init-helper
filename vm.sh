@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# List of required tools
+required_tools=("wget" "qemu-img" "genisoimage" "virt-install" "virsh" "mkpasswd" "arp-scan")
+
+# Check for required tools
+for tool in "${required_tools[@]}"; do
+  if ! command -v $tool &> /dev/null; then
+    echo "Error: Required tool $tool is not installed."
+    exit 1
+  fi
+done
+
+
 # Source the .env file in the current directory
 source .env
 
@@ -99,6 +111,9 @@ virt-install --name=${VM_NAME} --ram=${VM_RAM} --vcpus=${VM_CPUS} --import \
 sleep 20
 
 # Get the VM's IP address
-virsh net-dhcp-leases default
-
-
+if [ "$NETWORK_MODE" == "bridge" ]; then
+    virsh net-dhcp-leases default
+elif [ "$NETWORK_MODE" == "open" ]; then
+    MAC_ADDRESS=$(virsh domiflist $VM_NAME | grep -o -E "([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})")
+    arp-scan --localnet | grep $MAC_ADDRESS
+fi
